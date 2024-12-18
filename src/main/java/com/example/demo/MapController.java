@@ -62,6 +62,23 @@ public class MapController {
         return ResponseEntity.ok().body(pythonResponse.getBody());
     }
 
+    @GetMapping("/get_battery")
+    public ResponseEntity<?> getBatteryLevel() {
+        // Replace this with actual battery level reading logic
+        System.out.println("get_battery");
+//        int batteryLevel = 23;
+//        Map<String, Integer> response = new HashMap<>();
+//        response.put("x", batteryLevel);
+//        return ResponseEntity.ok(response);
+        RestTemplate restTemplate=new RestTemplate();
+        ResponseEntity<String> pythonResponse = restTemplate.getForEntity(
+                "http://" + robotUrl + ":5000/get_battery",
+                String.class
+        );
+        System.out.println(pythonResponse.getBody());
+        return ResponseEntity.ok().body(pythonResponse.getBody());
+    }
+
 //    @PostMapping("/move")
 //    public ResponseEntity<?> getMove(@RequestBody String direction) {
 //        System.out.println(direction);

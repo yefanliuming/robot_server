@@ -291,3 +291,4 @@ class MessageResponse {
     private String id;
     private Boolean confirmed;
 }
+
