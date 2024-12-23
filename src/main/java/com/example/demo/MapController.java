@@ -32,6 +32,7 @@ public class MapController {
 
     @GetMapping("/images/{filename:.+}")
     public ResponseEntity<Resource> getImage(@PathVariable("filename") String filename) {
+        System.out.println("getImage");
         try {
             Path file = Paths.get("src/main/resources/static/images").resolve(filename).normalize();
             Resource resource = new UrlResource(file.toUri());
