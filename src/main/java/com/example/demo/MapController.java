@@ -115,6 +115,9 @@ public class MapController {
     public ResponseEntity<?> getMove(@RequestBody Map<String, String> directionMap) {
         String direction = directionMap.get("direction");
         System.out.println(direction);
+
+        String speed = directionMap.get("speed");
+        System.out.println(speed);
         RestTemplate restTemplate = new RestTemplate();
 
         // 直接使用接收到的 Map 作为请求体
