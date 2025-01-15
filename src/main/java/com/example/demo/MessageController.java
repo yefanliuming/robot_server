@@ -39,6 +39,7 @@ public class MessageController {
     private final Map<String, Boolean> messageResponses = new ConcurrentHashMap<>();
 
     private String robotUrl = "192.168.1.105";
+    private String robotUrl2 = "192.168.1.107";
 
 
 //    @CrossOrigin(origins = "*")
@@ -112,41 +113,118 @@ public class MessageController {
 @PostMapping("/receiveMessage")
 public ResponseEntity<StreamingResponseBody> receiveMessage(@RequestBody MyMessage message) {
     System.out.println("Received message: " + message);
-    StreamingResponseBody responseBody = output -> {
-        PrintWriter writer = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
-        try {
-            String jsonMessage = objectMapper.writeValueAsString(message);
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<String> entity = new HttpEntity<>(jsonMessage, headers);
 
+    System.out.println("TargetRobot" + message.getRobotId());
+
+    if(message.getRobotId().equals("R001")){
+        StreamingResponseBody responseBody = output -> {
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
             try {
-                String targetUrl = "http://" + robotUrl + ":5000/receive_message";
-                ResponseEntity<String> pythonResponse = restTemplate.postForEntity(targetUrl, entity, String.class);
+                String jsonMessage = objectMapper.writeValueAsString(message);
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                HttpEntity<String> entity = new HttpEntity<>(jsonMessage, headers);
 
-                if (pythonResponse.getStatusCode() == HttpStatus.OK &&
-                        pythonResponse.getBody() != null &&
-                        pythonResponse.getBody().equals("连接已建立")) {
-                    writer.write("data: 连接已建立\n\n");
-                } else {
+                try {
+                    String targetUrl = "http://" + robotUrl + ":5000/receive_message";
+                    ResponseEntity<String> pythonResponse = restTemplate.postForEntity(targetUrl, entity, String.class);
+
+                    if (pythonResponse.getStatusCode() == HttpStatus.OK &&
+                            pythonResponse.getBody() != null &&
+                            pythonResponse.getBody().equals("连接已建立")) {
+                        writer.write("data: 连接已建立\n\n");
+                    } else {
+                        writer.write("data: 无法连接到Python服务器\n\n");
+                    }
+                    writer.flush();
+                    return;
+                } catch (Exception e) {
+                    System.err.println("Failed to connect to Python server: " + e.getMessage());
                     writer.write("data: 无法连接到Python服务器\n\n");
+                    writer.flush();
+                    return;
                 }
-                writer.flush();
-                return;
             } catch (Exception e) {
-                System.err.println("Failed to connect to Python server: " + e.getMessage());
-                writer.write("data: 无法连接到Python服务器\n\n");
-                writer.flush();
-                return;
+                System.err.println("Error in stream processing: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.err.println("Error in stream processing: " + e.getMessage());
-        }
-    };
+        };
 
-    return ResponseEntity.ok()
-            .contentType(MediaType.TEXT_EVENT_STREAM)
-            .body(responseBody);
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_EVENT_STREAM)
+                .body(responseBody);
+    }else {
+        StreamingResponseBody responseBody = output -> {
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
+            try {
+                String jsonMessage = objectMapper.writeValueAsString(message);
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                HttpEntity<String> entity = new HttpEntity<>(jsonMessage, headers);
+
+                try {
+                    String targetUrl = "http://" + robotUrl2 + ":5000/receive_message";
+                    ResponseEntity<String> pythonResponse = restTemplate.postForEntity(targetUrl, entity, String.class);
+
+                    if (pythonResponse.getStatusCode() == HttpStatus.OK &&
+                            pythonResponse.getBody() != null &&
+                            pythonResponse.getBody().equals("连接已建立")) {
+                        writer.write("data: 连接已建立\n\n");
+                    } else {
+                        writer.write("data: 无法连接到Python服务器\n\n");
+                    }
+                    writer.flush();
+                    return;
+                } catch (Exception e) {
+                    System.err.println("Failed to connect to Python server: " + e.getMessage());
+                    writer.write("data: 无法连接到Python服务器\n\n");
+                    writer.flush();
+                    return;
+                }
+            } catch (Exception e) {
+                System.err.println("Error in stream processing: " + e.getMessage());
+            }
+        };
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_EVENT_STREAM)
+                .body(responseBody);
+    }
+
+//    StreamingResponseBody responseBody = output -> {
+//        PrintWriter writer = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
+//        try {
+//            String jsonMessage = objectMapper.writeValueAsString(message);
+//            HttpHeaders headers = new HttpHeaders();
+//            headers.setContentType(MediaType.APPLICATION_JSON);
+//            HttpEntity<String> entity = new HttpEntity<>(jsonMessage, headers);
+//
+//            try {
+//                String targetUrl = "http://" + robotUrl + ":5000/receive_message";
+//                ResponseEntity<String> pythonResponse = restTemplate.postForEntity(targetUrl, entity, String.class);
+//
+//                if (pythonResponse.getStatusCode() == HttpStatus.OK &&
+//                        pythonResponse.getBody() != null &&
+//                        pythonResponse.getBody().equals("连接已建立")) {
+//                    writer.write("data: 连接已建立\n\n");
+//                } else {
+//                    writer.write("data: 无法连接到Python服务器\n\n");
+//                }
+//                writer.flush();
+//                return;
+//            } catch (Exception e) {
+//                System.err.println("Failed to connect to Python server: " + e.getMessage());
+//                writer.write("data: 无法连接到Python服务器\n\n");
+//                writer.flush();
+//                return;
+//            }
+//        } catch (Exception e) {
+//            System.err.println("Error in stream processing: " + e.getMessage());
+//        }
+//    };
+
+//    return ResponseEntity.ok()
+//            .contentType(MediaType.TEXT_EVENT_STREAM)
+//            .body(responseBody);
 }
 
     @PostMapping("/pythonMessage")
