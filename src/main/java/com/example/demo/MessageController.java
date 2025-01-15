@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -22,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -38,8 +40,17 @@ public class MessageController {
     // 用于存储消息响应的Map
     private final Map<String, Boolean> messageResponses = new ConcurrentHashMap<>();
 
-    private String robotUrl = "192.168.1.105";
-    private String robotUrl2 = "192.168.1.107";
+    private String robotUrl = "localhost";
+    private String robotUrl2 = "localhost";
+
+    @Autowired
+    private RobotTaskService robotTaskService;
+
+    // 获取活跃机器人列表
+    @GetMapping("/activeRobots")
+    public ResponseEntity<Set<String>> getActiveRobots() {
+        return ResponseEntity.ok(robotTaskService.getActiveRobots());
+    }
 
 
 //    @CrossOrigin(origins = "*")
@@ -116,6 +127,8 @@ public ResponseEntity<StreamingResponseBody> receiveMessage(@RequestBody MyMessa
 
     System.out.println("TargetRobot" + message.getRobotId());
 
+
+
     if(message.getRobotId().equals("R001")){
         StreamingResponseBody responseBody = output -> {
             PrintWriter writer = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
@@ -132,6 +145,10 @@ public ResponseEntity<StreamingResponseBody> receiveMessage(@RequestBody MyMessa
                     if (pythonResponse.getStatusCode() == HttpStatus.OK &&
                             pythonResponse.getBody() != null &&
                             pythonResponse.getBody().equals("连接已建立")) {
+
+                        // 添加机器人到活跃列表
+                        robotTaskService.addActiveRobot(message.getRobotId());
+
                         writer.write("data: 连接已建立\n\n");
                     } else {
                         writer.write("data: 无法连接到Python服务器\n\n");
@@ -162,12 +179,16 @@ public ResponseEntity<StreamingResponseBody> receiveMessage(@RequestBody MyMessa
                 HttpEntity<String> entity = new HttpEntity<>(jsonMessage, headers);
 
                 try {
-                    String targetUrl = "http://" + robotUrl2 + ":5000/receive_message";
+                    String targetUrl = "http://" + robotUrl2 + ":5001/receive_message";
                     ResponseEntity<String> pythonResponse = restTemplate.postForEntity(targetUrl, entity, String.class);
 
                     if (pythonResponse.getStatusCode() == HttpStatus.OK &&
                             pythonResponse.getBody() != null &&
                             pythonResponse.getBody().equals("连接已建立")) {
+
+                        // 添加机器人到活跃列表
+                        robotTaskService.addActiveRobot(message.getRobotId());
+
                         writer.write("data: 连接已建立\n\n");
                     } else {
                         writer.write("data: 无法连接到Python服务器\n\n");
@@ -275,33 +296,74 @@ public ResponseEntity<StreamingResponseBody> receiveMessage(@RequestBody MyMessa
     @CrossOrigin(origins = "*")
     @PostMapping("/receiveMessage2")
     public ResponseEntity<?> receiveMessage(@RequestBody TaskRequest taskRequest) {
-        try {
-        // 记录接收到的请求
-            String jsonMessage = objectMapper.writeValueAsString(taskRequest);
-            System.out.println("Received task request: " + jsonMessage);
 
-        // 创建 RestTemplate
-            RestTemplate restTemplate = new RestTemplate();
+        if(taskRequest.getRobotId().equals("R001")){
+            try {
+                // 记录接收到的请求
+                String jsonMessage = objectMapper.writeValueAsString(taskRequest);
+                System.out.println("Received task request: " + jsonMessage);
 
-            String targetUrl = "http://"+robotUrl+":5000/receive_message";
+                // 创建 RestTemplate
+                RestTemplate restTemplate = new RestTemplate();
 
-        // 转发请求到 Python 服务
-            ResponseEntity<String> pythonResponse = restTemplate.postForEntity(
-                    targetUrl,
-                    taskRequest,
-                    String.class
-            );
+                String targetUrl = "http://"+robotUrl+":5000/receive_message";
 
-        // 返回成功响应
-            System.out.println("Python response: " + pythonResponse.getBody());
-            return ResponseEntity.ok().body("{\"status\":\"success\",\"message\":\"Task processed successfully\",\"ok\":\"200\"}");
+                // 转发请求到 Python 服务
+                ResponseEntity<String> pythonResponse = restTemplate.postForEntity(
+                        targetUrl,
+                        taskRequest,
+                        String.class
+                );
 
-        } catch (Exception e) {
-            // 记录错误并返回错误响应
-            System.err.println("Error processing request: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error processing request: " + e.getMessage());
+                // 返回成功响应
+                System.out.println("Python response: " + pythonResponse.getBody());
+
+                // 添加机器人到活跃列表
+                robotTaskService.addActiveRobot(taskRequest.getRobotId());
+
+                return ResponseEntity.ok().body("{\"status\":\"success\",\"message\":\"Task processed successfully\",\"ok\":\"200\"}");
+
+            } catch (Exception e) {
+                // 记录错误并返回错误响应
+                System.err.println("Error processing request: " + e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Error processing request: " + e.getMessage());
+            }
         }
+        else{
+            try {
+                // 记录接收到的请求
+                String jsonMessage = objectMapper.writeValueAsString(taskRequest);
+                System.out.println("Received task request: " + jsonMessage);
+
+                // 创建 RestTemplate
+                RestTemplate restTemplate = new RestTemplate();
+
+                String targetUrl = "http://"+robotUrl2+":5000/receive_message";
+
+                // 转发请求到 Python 服务
+                ResponseEntity<String> pythonResponse = restTemplate.postForEntity(
+                        targetUrl,
+                        taskRequest,
+                        String.class
+                );
+
+                // 返回成功响应
+                System.out.println("Python response: " + pythonResponse.getBody());
+
+                // 添加机器人到活跃列表
+                robotTaskService.addActiveRobot(taskRequest.getRobotId());
+
+                return ResponseEntity.ok().body("{\"status\":\"success\",\"message\":\"Task processed successfully\",\"ok\":\"200\"}");
+
+            } catch (Exception e) {
+                // 记录错误并返回错误响应
+                System.err.println("Error processing request: " + e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Error processing request: " + e.getMessage());
+            }
+        }
+
     }
 
 //    @CrossOrigin(origins = "*")
