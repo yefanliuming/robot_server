@@ -40,8 +40,8 @@ public class MessageController {
     // 用于存储消息响应的Map
     private final Map<String, Boolean> messageResponses = new ConcurrentHashMap<>();
 
-    private String robotUrl = "localhost";
-    private String robotUrl2 = "localhost";
+    private String robotUrl = "192.168.1.105";
+    private String robotUrl2 = "192.168.1.107";
 
     @Autowired
     private RobotTaskService robotTaskService;
@@ -179,7 +179,7 @@ public ResponseEntity<StreamingResponseBody> receiveMessage(@RequestBody MyMessa
                 HttpEntity<String> entity = new HttpEntity<>(jsonMessage, headers);
 
                 try {
-                    String targetUrl = "http://" + robotUrl2 + ":5001/receive_message";
+                    String targetUrl = "http://" + robotUrl2 + ":5000/receive_message";
                     ResponseEntity<String> pythonResponse = restTemplate.postForEntity(targetUrl, entity, String.class);
 
                     if (pythonResponse.getStatusCode() == HttpStatus.OK &&
